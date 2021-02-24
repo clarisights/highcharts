@@ -160,7 +160,7 @@ var MACDIndicator = /** @class */ (function (_super) {
         // indicator.graph = null;
     };
     MACDIndicator.prototype.getZonesGraphs = function (props) {
-        var allZones = SeriesRegistry.seriesTypes.sma.prototype.getZonesGraphs.call(this, props), currentZones = allZones;
+        var allZones = _super.prototype.getZonesGraphs.call(this, props), currentZones = allZones;
         if (this.currentLineZone) {
             currentZones = allZones.splice(this[this.currentLineZone].startIndex + 1);
             if (!currentZones.length) {
@@ -188,33 +188,36 @@ var MACDIndicator = /** @class */ (function (_super) {
         this.zones = histogramZones;
     };
     MACDIndicator.prototype.getValues = function (series, params) {
-        var j = 0, MACD = [], xMACD = [], yMACD = [], signalLine = [], shortEMA, longEMA, i;
+        var indexToShift = params.longPeriod - params.shortPeriod, // #14197
+        j = 0, MACD = [], xMACD = [], yMACD = [], signalLine = [], shortEMA, longEMA, i;
         if (series.xData.length <
             params.longPeriod + params.signalPeriod) {
             return;
         }
         // Calculating the short and long EMA used when calculating the MACD
         shortEMA = SeriesRegistry.seriesTypes.ema.prototype.getValues(series, {
-            period: params.shortPeriod
+            period: params.shortPeriod,
+            index: params.index
         });
         longEMA = SeriesRegistry.seriesTypes.ema.prototype.getValues(series, {
-            period: params.longPeriod
+            period: params.longPeriod,
+            index: params.index
         });
         shortEMA = shortEMA.values;
         longEMA = longEMA.values;
         // Subtract each Y value from the EMA's and create the new dataset
         // (MACD)
-        for (i = 1; i <= shortEMA.length; i++) {
-            if (defined(longEMA[i - 1]) &&
-                defined(longEMA[i - 1][1]) &&
-                defined(shortEMA[i + params.shortPeriod + 1]) &&
-                defined(shortEMA[i + params.shortPeriod + 1][0])) {
+        for (i = 0; i <= shortEMA.length; i++) {
+            if (defined(longEMA[i]) &&
+                defined(longEMA[i][1]) &&
+                defined(shortEMA[i + indexToShift]) &&
+                defined(shortEMA[i + indexToShift][0])) {
                 MACD.push([
-                    shortEMA[i + params.shortPeriod + 1][0],
+                    shortEMA[i + indexToShift][0],
                     0,
                     null,
-                    shortEMA[i + params.shortPeriod + 1][1] -
-                        longEMA[i - 1][1]
+                    shortEMA[i + indexToShift][1] -
+                        longEMA[i][1]
                 ]);
             }
         }

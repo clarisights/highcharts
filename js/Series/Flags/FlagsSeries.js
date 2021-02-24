@@ -373,7 +373,7 @@ var FlagsSeries = /** @class */ (function (_super) {
          * @product   highstock
          */
         tooltip: {
-            pointFormat: '{point.text}<br/>'
+            pointFormat: '{point.text}'
         },
         threshold: null,
         /**
@@ -512,6 +512,8 @@ extend(FlagsSeries.prototype, {
      * @function Highcharts.seriesTypes.flags#invertGroups
      */
     invertGroups: noop,
+    // Flags series group should not be invertible (#14063).
+    invertible: false,
     noSharedTooltip: true,
     pointClass: FlagsPoint,
     sorted: false,

@@ -6,12 +6,11 @@
  *
  * Indicator series type for Highstock
  *
- * (c) 2010-2019 Kamil Kulig
+ * (c) 2010-2021 Kamil Kulig
  *
  * License: www.highcharts.com/license
  */
 'use strict';
-
 import '../../Stock/Indicators/LinearRegression/LinearRegression.js';
 // eslint-disable-next-line max-len
 import '../../Stock/Indicators/LinearRegressionSlopes/LinearRegressionSlopes.js';
