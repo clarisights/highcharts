@@ -977,7 +977,7 @@ var Tooltip = /** @class */ (function () {
         // The area which the tooltip should be limited to. Limit to scrollable
         // plot area if enabled, otherwise limit to the chart container.
         // If outside is true it should be the whole viewport
-        var bounds = tooltip.outside && !scrollablePixelsX ?
+        var bounds = tooltip.outside && typeof scrollablePixelsX !== 'number' ?
             doc.documentElement.getBoundingClientRect() : {
             left: scrollLeft,
             right: scrollLeft + chartWidth,
@@ -1016,10 +1016,6 @@ var Tooltip = /** @class */ (function () {
                     yAxis.pos + plotY <= scrollTop + plotTop + plotHeight - scrollablePixelsY) {
                     anchorY = yAxis.pos + plotY;
                 }
-            }
-            // Add chart X position to anchorX if not scrollable
-            if (tooltip.outside && !scrollablePixelsX) {
-                anchorX += chartLeft;
             }
             // Limit values to plot area
             anchorX = clamp(anchorX, bounds.left - distance, bounds.right + distance);
@@ -1164,14 +1160,17 @@ var Tooltip = /** @class */ (function () {
             }
             return boxes;
         }, []);
-        var isInsideRightBounds = function (box) { return ((tooltip.outside ?
-            box.anchorX + distance + box.boxWidth :
-            box.point.plotX + box.boxWidth) < bounds.right); };
-        // If overflow left then align all labels to the right
-        // if they do not overflow to the right
+        // Realign the tooltips towards the right if there is not enough
+        // space to the left and there is space to to the right
         if (!positioner && boxes.some(function (box) {
-            return box.x < scrollLeft &&
-                isInsideRightBounds(box);
+            // Always realign if the beginning of a label is outside bounds
+            if (bounds.left + chartLeft + box.x < bounds.left) {
+                return true;
+            }
+            // Otherwise, check if there is more space available to the right
+            var availableSpaceLeft = (chartLeft - bounds.left) + box.x + box.boxWidth;
+            return availableSpaceLeft < (chartLeft - bounds.left) + box.boxWidth &&
+                bounds.right - availableSpaceLeft > availableSpaceLeft;
         })) {
             boxes = boxes.map(function (box) {
                 var _a = defaultPositioner(box.anchorX, box.anchorY, box.point.isHeader, box.boxWidth, false), x = _a.x, y = _a.y;
@@ -1185,8 +1184,22 @@ var Tooltip = /** @class */ (function () {
         tooltip.cleanSplit();
         // Distribute and put in place
         H.distribute(boxes, adjustedPlotHeight);
+        var leftMostBoxX = chartLeft;
         boxes.forEach(function (box) {
-            var x = box.x, anchorX = box.anchorX, anchorY = box.anchorY, pos = box.pos;
+            var x = box.x, anchorX = box.anchorX, anchorY = box.anchorY, pos = box.pos, isHeader = box.point.isHeader;
+            if (chartLeft + x < leftMostBoxX) {
+                leftMostBoxX = chartLeft + x;
+            }
+            var adjustedValues = {};
+            if (tooltip.outside) {
+                if (!isHeader && chartLeft + x < chartLeft) {
+                    adjustedValues.x = 0;
+                }
+                if (isHeader && leftMostBoxX < chartLeft) {
+                    var offset = chartLeft - leftMostBoxX;
+                    adjustedValues.anchorX = anchorX + offset;
+                }
+            }
             // Put the label in place
             box.tt.attr({
                 visibility: typeof pos === 'undefined' ? 'hidden' : 'inherit',
@@ -1200,6 +1213,11 @@ var Tooltip = /** @class */ (function () {
                 anchorX: anchorX,
                 anchorY: anchorY
             });
+            // Set the adjusted values.
+            // For an unknown reason, x cannot be set to 0 above
+            if (Object.keys(adjustedValues)) {
+                box.tt.attr(adjustedValues);
+            }
         });
         /* If we have a seperate tooltip container, then update the necessary
          * container properties.
@@ -1209,10 +1227,10 @@ var Tooltip = /** @class */ (function () {
         var container = tooltip.container, outside = tooltip.outside, renderer = tooltip.renderer;
         if (outside && container && renderer) {
             // Set container size to fit the bounds
-            var _f = tooltipLabel.getBBox(), width = _f.width, x = _f.x;
-            renderer.setSize(scrollablePixelsX ? width + x : bounds.right - bounds.left, bounds.bottom - bounds.top, false);
+            var _f = tooltipLabel.getBBox(), width = _f.width, height = _f.height, x = _f.x, y = _f.y;
+            renderer.setSize(width + x, height + y, false);
             // Position the tooltip container to the chart container
-            container.style.left = (scrollablePixelsX ? chartLeft : bounds.left) + 'px';
+            container.style.left = leftMostBoxX + 'px';
             container.style.top = chartTop + 'px';
         }
     };
