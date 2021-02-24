@@ -1191,18 +1191,7 @@ var Tooltip = /** @class */ (function () {
             if (chartLeft + x < leftMostBoxX) {
                 leftMostBoxX = chartLeft + x;
             }
-            var adjustedValues = {};
-            if (tooltip.outside) {
-                if (!isHeader && chartLeft + x < chartLeft) {
-                    adjustedValues.x = 0;
-                }
-                if (isHeader && leftMostBoxX < chartLeft) {
-                    var offset = chartLeft - leftMostBoxX;
-                    adjustedValues.anchorX = anchorX + offset;
-                }
-            }
-            // Put the label in place
-            box.tt.attr({
+            var attributes = {
                 visibility: typeof pos === 'undefined' ? 'hidden' : 'inherit',
                 x: x,
                 /* NOTE: y should equal pos to be consistent with !split
@@ -1213,12 +1202,21 @@ var Tooltip = /** @class */ (function () {
                 y: pos + distributionBoxTop,
                 anchorX: anchorX,
                 anchorY: anchorY
-            });
-            // Set the adjusted values.
-            // For an unknown reason, x cannot be set to 0 above
-            if (Object.keys(adjustedValues)) {
-                box.tt.attr(adjustedValues);
+            };
+            // Handle left-aligned tooltips overflowing the chart area
+            if (tooltip.outside) {
+                var offset = chartLeft - leftMostBoxX;
+                if (!isHeader && chartLeft + x < chartLeft) {
+                    attributes.x = x + offset;
+                    attributes.anchorX = anchorX + offset;
+                }
+                if (isHeader && leftMostBoxX < chartLeft) {
+                    attributes.x = offset;
+                    attributes.anchorX = anchorX + offset;
+                }
             }
+            // Put the label in place
+            box.tt.attr(attributes);
         });
         /* If we have a seperate tooltip container, then update the necessary
          * container properties.
